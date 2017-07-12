@@ -22,12 +22,12 @@
 #include <glew/glew.h>
 #endif
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_impl_glfw_gl3.h>
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw_gl3.h"
 #include "DebugDraw.h"
 #include "Test.h"
 
-#include <glfw/glfw3.h>
+#include "glfw/glfw3.h"
 #include <stdio.h>
 
 #ifdef _MSC_VER
@@ -67,7 +67,7 @@ static void sCreateUI(GLFWwindow* window)
 	ui.showMenu = true;
 
 	// Init UI
-	const char* fontPath = "../Data/DroidSans.ttf";
+	const char* fontPath = "Data/DroidSans.ttf";
 	ImGui::GetIO().Fonts->AddFontFromFileTTF(fontPath, 15.f);
 
 	if (ImGui_ImplGlfwGL3_Init(window, false) == false)
@@ -427,12 +427,20 @@ static void sInterface()
 }
 
 //
+void glfwErrorCallback(int error, const char *description)
+{
+	fprintf(stderr, "GLFW error occured. Code: %d. Description: %s\n", error, description);
+}
+
+//
 int main(int, char**)
 {
 #if defined(_WIN32)
 	// Enable memory-leak reports
 	_CrtSetDbgFlag(_CRTDBG_LEAK_CHECK_DF | _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG));
 #endif
+
+	glfwSetErrorCallback(glfwErrorCallback);
 
 	g_camera.m_width = 1024;
 	g_camera.m_height = 640;
@@ -447,9 +455,10 @@ int main(int, char**)
 	sprintf(title, "Box2D Testbed Version %d.%d.%d", b2_version.major, b2_version.minor, b2_version.revision);
 
 #if defined(__APPLE__)
-	// Not sure why, but these settings cause glewInit below to crash.
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+	// Without these settings on macOS, OpenGL 2.1 will be used by default which will cause crashes at boot.
+	// This code is a slightly modified version of the code found here: http://www.glfw.org/faq.html#how-do-i-create-an-opengl-30-context
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #endif
@@ -510,7 +519,10 @@ int main(int, char**)
 	while (!glfwWindowShouldClose(mainWindow))
 	{
 		glfwGetWindowSize(mainWindow, &g_camera.m_width, &g_camera.m_height);
-		glViewport(0, 0, g_camera.m_width, g_camera.m_height);
+        
+        int bufferWidth, bufferHeight;
+        glfwGetFramebufferSize(mainWindow, &bufferWidth, &bufferHeight);
+        glViewport(0, 0, bufferWidth, bufferHeight);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -541,7 +553,7 @@ int main(int, char**)
 	if (test)
 	{
 		delete test;
-		test = nullptr;
+		test = NULL;
 	}
 
 	g_debugDraw.Destroy();
